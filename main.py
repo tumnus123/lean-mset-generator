@@ -1,6 +1,4 @@
-#-*-coding:utf8;-*-
-#qpy:3
-#qpy:console
+
 
 # divide-and-conquer
 
@@ -9,7 +7,7 @@ class Point(object):
     x = 0.0
     y = 0.0
     i = 0
-    
+
     def __init__(self, x, y, pid, gen, nu=0, nr=0, nd=0, nl=0):
         self.x = x
         self.y = y
@@ -25,11 +23,11 @@ class Point(object):
         self.neigh_lox["right"] = False
         self.neigh_lox["down"] = False
         self.neigh_lox["left"] = False
-        
+
 class MSet(object):
 
     debug_flag = True
-    
+
     def __init__(self,xmin,ymin,xmax,ymax):
         self.gen = 0
         self.extent = {
@@ -57,9 +55,9 @@ class MSet(object):
             iter += 1
             z = (z * z) + c
             if (abs(z.real) > 4) or (abs(z.imag) > 4):
-                break 
+                break
         return iter
-        
+
     def calc_slope(self, p1, p2):
         d_x = abs(p1.x - p2.x)
         d_y = abs(p1.y - p2.y)
@@ -70,10 +68,10 @@ class MSet(object):
             run = d_y
         rise = abs(p1.i - p2.i)
         return rise / run
-        
+
     def get_next_pid(self):
         return len(self.points) + 1
-    
+
     def get_opp_dir(self, d):
         opp = ""
         if d == "up":
@@ -87,7 +85,7 @@ class MSet(object):
         else:
             opp = "unk"
         return opp
-        
+
     def create_mid_pt(self, pt_a, pt_b):
         # considers both x and y diffs
         # subtract the smaller from the larger and add to the smaller
@@ -103,26 +101,26 @@ class MSet(object):
             pt_c_y = ((pt_a.y - pt_b.y) / 2) + pt_b.y
         pt_c_id = self.get_next_pid()
         pt_c = Point(pt_c_x, pt_c_y, pt_c_id, self.gen+1)
-        
+
         if self.debug_flag:
             print("Created mid pt:")
             print("   id={}, x={}, y={}, gen={}".format(pt_c.pid, pt_c.x, pt_c.y, pt_c.gen))
         return pt_c
-        
+
     def update_neighs(self, pt_a, pt_b, pt_c):
         # determine easy neighs
-        
+
         # determine hard neighs
-        
+
         return True
-        
+
     def report(self):
         print("----- begin report -----")
         print("Total points: {}".format(len(self.points)))
         for i in range(self.gen + 1):
             print("  Gen {}: nn points".format(i))
         print("----- end report -----")
-          
+
     def generate(self):
         # print("sg:",self.gen)
         tot_points_to_gen = 0
@@ -134,7 +132,7 @@ class MSet(object):
         for i in self.points:
             p = self.points[i]
             if p.gen==self.gen:
-                
+
                 print("Generating point {} ({} of {}):".format(p.pid, points_gen_count, tot_points_to_gen))
                 for dir in p.neighs:
                     print("  Processing '{}' dir...".format(dir))
@@ -143,14 +141,14 @@ class MSet(object):
                     if p.neighs[dir] == -1:
                         p.neigh_lox[dir] = True
                         print("    Neigh is -1; now locked")
-                    # If pt A is not locked in a dir, 
+                    # If pt A is not locked in a dir,
                     # and neighbor B is not locked in the opposite dir:
                     self_locked_in_dir = p.neigh_lox[dir]
                     print("    Self (pid={}) locked in {} dir? {}".format(p.pid, dir, p.neigh_lox[dir]))
                     if not self_locked_in_dir:
                         neigh = self.points[p.neighs[dir]]
                         opp_dir = self.get_opp_dir(dir)
-    
+
                         neigh_locked_in_opp_dir = neigh.neigh_lox[opp_dir]
                         print("    Neigh (pid={}) locked in {} dir? {}".format(neigh.pid, opp_dir, neigh.neigh_lox[opp_dir]))
                         if not neigh_locked_in_opp_dir:
@@ -162,8 +160,8 @@ class MSet(object):
                                 mid_pt_with_neighs = self.update_neighs(p, neigh, mid_pt)
                                 self.report()
                 points_gen_count += 1
-                
-        # process each points 
+
+        # process each points
             # consider each neighbor
                 # if n.pid > 0
                 #    and this pair hasnt been gen'd yet
@@ -172,7 +170,7 @@ class MSet(object):
  # curr_gen = 1
  # for each pt with gen==curr_gen:
     # for each dir d:
-    
+
     # A and B,
     # Compare pt A iter to iters of neighs in dir of new neigh
     #    If at least 3 consec neigh iters are all within some f(x) of pt A iter,
@@ -180,16 +178,16 @@ class MSet(object):
     #
     # New point neighbor values init to 0.
     # A val of -1 is an edge
-    
+
     # When a new pt C is made,
     # two neighs are already known and assigned.
     # To find the other two:
-    
+
     def assign_neighbors(self, pt):
         # Look at both known neighs, A and B.
         for d in range(5):
             pass
-        
+
         # Look at their perp neigh vals, a pair at a time:
         #    If both are -1, then set C's neigh in same dir = -1
         #    Else look at the id'd neighs themselves (D and E).
@@ -198,8 +196,8 @@ class MSet(object):
         #    If both are same id, that's C's neigh in that dir
         #    Else diff id's, so look to the next further out
         #            neigh of the pt with the higher id.
-        
-        
+
+
 
 mset = MSet(-0.8,-0.9,0.8,0.9)
 print(mset.extent["xmin"])
@@ -208,13 +206,13 @@ for p in mset.points.values():
     print("id:{}, gen:{}, iters:{}".format(p.pid, p.gen, p.i))
     for n in p.neighs:
         print("   {}:{}, {}".format(n, p.neighs[n], p.neigh_lox[n]))
-        
+
 print("-----")
 mset.generate()
 
-        
 
 
 
 
-   
+
+
