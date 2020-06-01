@@ -30,21 +30,6 @@ def calc_iter(cplx_x, cplx_y, max_iter=20, alg=0, threshold=4):
         iter = iter_real
     return iter
 
-def calc_color(p, alg='bw', min_i=1, max_i=20):
-    if alg=='ni': # normalized integer
-        # normalize iter range over 0-255
-        norm_i = int(((p.i - min_i) / (max_i - min_i)) * 255)
-        # apply normalized iter to color (hex)
-        #return([norm_i,0,0])
-        hex_str = '#%02x%02x%02x' % (255-norm_i, 255-norm_i, 255-norm_i)
-        # elif alg=='tc': # truecolor
-        #     # uses rgb values
-    else: # black/white
-        hex_str = "#000000"
-        if p.i%2==0:
-            hex_str = "#ffffff"
-
-    return(hex_str)
 
 
 # ============

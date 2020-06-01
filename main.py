@@ -25,11 +25,11 @@ from mandelset import MSet
 print("Starting...")
 # mset = MSet(-0.18, 1.05, 15.0, 40, 30)
 mset = MSet(
-    frc_ctr_x=-0.5,
-    frc_ctr_y=0.0,
-    mag=1.0,
-    scr_width=100,
-    scr_height=100,
+    frc_ctr_x=-0.102,
+    frc_ctr_y=0.96,
+    mag=5.0,
+    scr_width=80,
+    scr_height=60,
     alg=0,
     pal=0,
     thresh=4,
