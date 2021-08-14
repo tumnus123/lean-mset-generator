@@ -1,41 +1,32 @@
 # lean-mset-generator
 # Author: Jason Hine (tumnus123@gmail.com)
 #
-# Objective: A new, highly-efficient algorithm for generating the Mandelbrot
-# set. Given four corners, iteratively find midpoints between existing points.
-# Test midpoints against X number of increasingly distant neighboring points to see if
-# graph of slopes follows a smooth curve. When test passes 99%, lock most distant
-# lower-iter point in the test set so it is no longer a candidate for mid-point
-# finding. When test passes 99.999%, calculate the limit as iters go to inf, add
-# that point as being on the edge of the M-set, and lock it.
+# Objective: A new, efficient algorithm for generating an image of the Mandelbrot
+# set (or other escape-time fractals). For a given row of pixels, iteratively find
+# midpoints between existing points to form "triplets". Determine quadratic coefficients
+# for each triplet. Calculate one of the triplet's children (e.g., left midpoint) using both
+# escape-time and quadratic equation. If results of both calculations are similar enough,
+# consider using the quadratic eq to determine the remaining pixels in the triplet's range.
 #
-# Usage:
-# MSet( frc_ctr_x=-0.5,
-#       frc_ctr_y=0.0,
-#       mag=1.0,
-#       scr_width=40,
-#       scr_height=30,
-#       alg=0,
-#       pal=0,
-#       thresh=4,
-#       generations=4)
 
 from mandelset import MSet
 
 print("Starting...")
 # mset = MSet(-0.18, 1.05, 15.0, 40, 30)
 mset = MSet(
-    frc_ctr_x=-0.5,
-    frc_ctr_y=0.0,
-    mag=1.0,
-    scr_width=100,
-    scr_height=100,
+    frc_ctr_x=-0.18,
+    frc_ctr_y=1.05,
+    mag=15.0,
+    scr_width=1025,
+    scr_height=513,
     alg=0,
     pal=0,
     thresh=4,
     generations=4)
 
-mset.calc()
-mset.plot()
+# mset.calc()
+mset.calc_simple_2D_array()
+# mset.plot()
+mset.plot_PIL()
 
 print("... Done!")
