@@ -45,16 +45,7 @@ class MSet(object):
         min_i = 999999
         max_i = -1
 
-        # calculate size of square 'dot'
-        # at mag 1.0, the smaller of the screen dims is exactly 1.0 in fractal space
-        # mag 2.0 --> 0.5 in fractal space
-        # mag 4.0 --> 0.25
-        narrow_dim = -1
-        if (self.scr_width >= self.scr_height):
-            narrow_dim = self.scr_height
-        else:
-            narrow_dim = self.scr_width
-        dot_size = 1 / ((self.mag / 2) * narrow_dim)
+        dot_size = self.get_dot_size()
 
         # calculate the corners off the center and dot_size
         self.frc_min_x = self.frc_ctr_x - (dot_size * (self.scr_width / 2))
@@ -80,7 +71,8 @@ class MSet(object):
         if DEBUG_FLAG:
             print("During calc, found min_i: {}, max_i: {}".format(min_i, max_i))
         for p in self._points:
-            p.color = mands.calc_color(p, 'bw', min_i, max_i)
+            # Doing this now in plot()
+            # p.color = mands.calc_color(p, 'bw', min_i, max_i)
             if DEBUG_FLAG:
                 print("Got color for x: {}, y: {}, i: {}: {}".format(p.x, p.y, p.i, p.color))
 
@@ -88,14 +80,54 @@ class MSet(object):
 
     def plot(self):
         if DEBUG_FLAG:
-            print(f"Starting plot of {len(self._points)} points...")
+            print(f"Setting color of {len(self._points)} points...")
+        for p in self._points:
+            p.color = self.set_colors(p, 'black-white')
+        if DEBUG_FLAG:
+            print(f"... done. Starting plot of {len(self._points)} points...")
         fig = plt.figure()
         ax = fig.add_subplot(111)
+        dot_size = self.get_dot_size()
         for p in self._points:
-            ax.plot(p.x, p.y, "ro", color=p.color, markersize=2.0)
+            ax.plot(p.x, p.y, "rs", color=p.color, markersize=4.0) # 1/dot_size*1.01)
         fig.savefig("output_imgs\graph001.png")
 
+    def set_colors(self, p, alg='black-white', min_i=1, max_i=20):
+        if alg == 'normalized-int':  # normalized integer
+            # normalize iter range over 0-255
+            norm_i = int(((p.i - min_i) / (max_i - min_i)) * 255)
+            # apply normalized iter to color (hex)
+            # return([norm_i,0,0])
+            hex_str = '#%02x%02x%02x' % (255 - norm_i, 255 - norm_i, 255 - norm_i)
+            # elif alg=='tc': # truecolor
+            #     # uses rgb values
+        else:  # black-white
+            hex_str = "#000000"
+            if p.i % 2 == 0:
+                hex_str = "#ffffff"
+
+        return (hex_str)
+
+    def get_dot_size(self):
+        # calculate size of square 'dot'
+        # at mag 1.0, the smaller of the screen dims is exactly 1.0 in fractal space
+        # mag 2.0 --> 0.5 in fractal space
+        # mag 4.0 --> 0.25
+        narrow_dim = -1
+        if (self.scr_width >= self.scr_height):
+            narrow_dim = self.scr_height
+        else:
+            narrow_dim = self.scr_width
+        dot_size = 1 / ((self.mag / 2) * narrow_dim)
+        if DEBUG_FLAG:
+            print(f"Got dot size: {dot_size}")
+        return dot_size
+
+
 class Point(object):
+    # Each Point has a unique PID, and stores the PID of its nearest cardinal neighbors.
+    # Each Point belongs to a GENeration.
+
 
     def __init__(self, x, y, i=-1, color="#000000", pid=-1, gen=-1, nu=0, nr=0, nd=0, nl=0):
         self.x = x
