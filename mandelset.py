@@ -19,15 +19,15 @@ import sympy
 
 class MSet(object):
 
-    def __init__(self,frc_ctr_x=-0.5, frc_ctr_y=0.0, mag=1.0, maxiter=50, scr_width=40, scr_height=30, alg=0, pal=0, thresh=4, generations=4):
+    def __init__(self, frc_ctr_x=-0.5, frc_ctr_y=0.0, mag=1.0, maxiter=50, img_width=40, img_height=30, alg=0, pal=0, thresh=4, generations=4):
 
         # Take px width/height and center/mag params
         self.frc_ctr_x = frc_ctr_x
         self.frc_ctr_y = frc_ctr_y
         self.mag = mag
         self.maxiter = maxiter
-        self.scr_width = scr_width
-        self.scr_height = scr_height
+        self.img_width = img_width
+        self.img_height = img_height
         self.alg = alg                  # calculation algorithm 0=int, 1=dec
         self.pal = pal                  # palette
         self.thresh = 4                 # escape-time threshold
@@ -45,15 +45,12 @@ class MSet(object):
         self._gen = 0
         self._points = {}
         self._iter_array = []
-        self._pixels = []
+        self._pixels = [None for i in range(self.img_width * self.img_height)]
 
 
     def calc_simple_2D_array(self, max_iter=50):
         if DEBUG_FLAG:
             print(f"Entered calc_simple_2D_array(max_iter={max_iter})...")
-
-        img_width = self.scr_width  # for now...
-        img_height = self.scr_height
 
         # calculate size of pixel in fractal-space (100dpu)
         # at mag 1.0, 1.0 in fractal space is 100 pixels
@@ -62,48 +59,52 @@ class MSet(object):
         pixel_size = 1 / (self.mag * 100)
 
         # calculate the corners off the center and dot_size
-        frc_min_x = self.frc_ctr_x - (pixel_size * (img_width / 2))
-        frc_max_x = self.frc_ctr_x + (pixel_size * (img_width / 2))
-        frc_min_y = self.frc_ctr_y - (pixel_size * (img_height / 2))
-        frc_max_y = self.frc_ctr_y + (pixel_size * (img_height / 2))
+        frc_min_x = self.frc_ctr_x - (pixel_size * (self.img_width / 2))
+        frc_max_x = self.frc_ctr_x + (pixel_size * (self.img_width / 2))
+        frc_min_y = self.frc_ctr_y - (pixel_size * (self.img_height / 2))
+        frc_max_y = self.frc_ctr_y + (pixel_size * (self.img_height / 2))
         if DEBUG_FLAG:
             print(f"Fractal space corners calculated based on 1 pixel = {pixel_size}...")
             print(f"   Top left    : ({frc_min_x}, {frc_max_y})")
             print(f"   Bottom right: ({frc_max_x}, {frc_min_y})")
 
         self._iter_array = []
-        for image_y in range(img_height):
+        for image_y in range(self.img_height):
             fractal_y = frc_min_y + (pixel_size * image_y)
-            for i in range(img_width):
 
-                if i==0:  # i = 0 is the leftmost pixel in the row
-                    image_x = 0
-                    fractal_x = frc_min_x
-                    px = Pixel(image_x, image_y, fractal_x, fractal_y)
-                    px.output_z = self.calc_escape(px, self.maxiter)
-                    px.output_method = "esc"
-                    self._pixels.append(px)
-                elif i==1:  # i = 1 is the rightmost pixel in the row
-                    image_x = img_width-1
-                    fractal_x = frc_min_x + (pixel_size * image_x)
-                    px = Pixel(image_x, image_y, fractal_x, fractal_y)
-                    px.output_z = self.calc_escape(px, self.maxiter)
-                    px.output_method = "esc"
-                    self._pixels.append(px)
-                elif i==2:  # i = 2 is the first middle pixels in the row
-                    image_x = (img_width-1) / 2
-                    fractal_x = frc_min_x + (pixel_size * image_x)
-                    px = Pixel(image_x, image_y, fractal_x, fractal_y)
-                    px.output_z = self.calc_escape(px, self.maxiter)
-                    px.output_method = "esc"
-                    px.triplet_name = "T"
-                    px.triplet_quat_fmla = self.generate_triplet_quat_fmla(self._pixels[0], px, self._pixels[1])
-                    self._pixels.append(px)
-                else:  # i > 2 are defined recursively
-                    self.define_pixels_recursively(self._pixels[2], 0)
+            # define the leftmost pixel in the row
+            image_x = 0
+            fractal_x = frc_min_x
+            px_leftmost = Pixel(image_x, image_y, fractal_x, fractal_y)
+            px_leftmost.output_z = self.calc_escape(px_leftmost, self.maxiter)
+            px_leftmost.output_method = "esc"
+            self._pixels[int(self.img_width * image_y)] = px_leftmost
+
+            # define the rightmost pixel in the row
+            image_x = self.img_width-1
+            fractal_x = frc_min_x + (pixel_size * image_x)
+            px_rightmost = Pixel(image_x, image_y, fractal_x, fractal_y)
+            px_rightmost.output_z = self.calc_escape(px_rightmost, self.maxiter)
+            px_rightmost.output_method = "esc"
+            self._pixels[int((self.img_width * (image_y + 1)) - 1)] = px_rightmost
+
+            # define the first middle pixel in the row
+            image_x = (self.img_width-1) / 2
+            fractal_x = frc_min_x + (pixel_size * image_x)
+            px_middle = Pixel(image_x, image_y, fractal_x, fractal_y)
+            px_middle.output_z = self.calc_escape(px_middle, self.maxiter)
+            px_middle.output_method = "esc"
+            px_middle.triplet_name = "T"
+            px_middle.triplet_quat_fmla = self.generate_triplet_quat_fmla(px_leftmost, px_middle, px_rightmost)
+            self._pixels[int((self.img_width * image_y) + image_x)] = px_middle
+
+            # define the remaining pixels in the row recursively
+            self.define_pixels_recursively(px_middle, 0)
+
         # DEBUG
         if DEBUG_FLAG:
-            for i in range(img_width):
+            for i in range(self.img_width):
+                # print(self._pixels[i])
                 print(f"Name: {self._pixels[i].triplet_name}, image_x: {self._pixels[i].image_x}")
 
 
@@ -116,7 +117,7 @@ class MSet(object):
                     px_parent.fractal_x / (2 * len(px_parent.triplet_name)))
             px_left = Pixel(left_image_x, px_parent.image_y, left_fractal_x, px_parent.fractal_y)
             px_left.triplet_name = ''.join([px_parent.triplet_name, 'L'])
-            self._pixels.append(px_left)
+            self._pixels[int((self.img_width * px_parent.image_y) + left_image_x)] = px_left
             self.define_pixels_recursively(px_left, px_parent.image_x)
 
             # define the pixel to the right of the parent
@@ -125,7 +126,7 @@ class MSet(object):
                     px_parent.fractal_x / (2 * len(px_parent.triplet_name)))
             px_right = Pixel(right_image_x, px_parent.image_y, right_fractal_x, px_parent.fractal_y)
             px_right.triplet_name = ''.join([px_parent.triplet_name, 'R'])
-            self._pixels.append(px_right)
+            self._pixels[int((self.img_width * px_parent.image_y) + right_image_x)] = px_right
             self.define_pixels_recursively(px_right, px_parent.image_x)
 
         else:  # further subdivision is not possible
@@ -252,7 +253,7 @@ class MSet(object):
             print(f"Starting PIL plot of {len(self._iter_array)} iteration values, with")
             print(f"   min iter val: {self.min_iter}")
             print(f"   max iter val: {self.max_iter}")
-        display.display_iter_array(self._iter_array, self.min_iter, self.max_iter, self.scr_width, self.scr_height)
+        display.display_iter_array(self._iter_array, self.min_iter, self.max_iter, self.img_width, self.img_height)
 
 class Pixel(object):
 
