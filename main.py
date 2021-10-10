@@ -16,9 +16,11 @@ print("Starting...")
 mset = MSet(
     frc_ctr_x=-0.18,
     frc_ctr_y=1.05,
-    mag=25.0,
-    img_width=9,
-    img_height=1,
+    # frc_ctr_x=0,
+    # frc_ctr_y=0,
+    mag=50.0,
+    img_width=80,
+    img_height=60,
     alg=0,
     pal=0,
     thresh=4,
@@ -27,6 +29,6 @@ mset = MSet(
 # mset.calc()
 mset.calc_simple_2D_array()
 # mset.plot()
-# mset.plot_PIL()
+mset.plot_PIL()
 
 print("... Done!")
