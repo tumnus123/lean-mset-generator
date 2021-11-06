@@ -11,7 +11,10 @@ def display_iter_array(pixel_array, min_z, max_z, img_width, img_height):
     # convert iter_array to RGB_array
     RGB_array = []
     for px in pixel_array:
-        RGB_array.append(get_pixel_color(min_z, max_z, px.output_z))
+        if px is None:
+            RGB_array.append(get_pixel_color(min_z, max_z, min_z))
+        else:
+            RGB_array.append(get_pixel_color(min_z, max_z, px.output_z))
 
     img.putdata(RGB_array)
     img.save('output_imgs\pil_image.png')

@@ -1,7 +1,7 @@
 # mandelset.py
 #---------------
-# Last update: 10/9/2021
-#              No real updates since 8/21; need to implement asyncio
+# Last update: 11/5/2021 (basic recursion working)
+#
 DEBUG_FLAG = True
 
 import mandelmaths as mands
@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 
 import math
 import sympy
+import asyncio
 
 class MSet(object):
 
@@ -25,7 +26,7 @@ class MSet(object):
         self.frc_ctr_y = frc_ctr_y
         self.mag = mag
         self.maxiter = maxiter
-        self.img_width = img_width
+        self.img_width = img_width      # must be odd?
         self.img_height = img_height
         self.alg = alg                  # calculation algorithm 0=int, 1=dec
         self.pal = pal                  # palette
@@ -44,7 +45,7 @@ class MSet(object):
         self._pixels = [None for i in range(self.img_width * self.img_height)]
 
 
-    def calc_simple_2D_array(self, max_iter=50):
+    async def calc_simple_2D_array(self, max_iter=50):
         if DEBUG_FLAG:
             print(f"Entered calc_simple_2D_array(max_iter={max_iter})...")
 
@@ -67,8 +68,7 @@ class MSet(object):
 
         for image_y in range(self.img_height):
 
-            if DEBUG_FLAG:
-                if image_y % 10 == 0: print(f"Processing row {image_y}")
+            if DEBUG_FLAG: print(f"Processing row {image_y}")
 
             fractal_y = self.frc_min_y + (self.pixel_size * image_y)
 
@@ -109,7 +109,7 @@ class MSet(object):
             # define the remaining pixels in the row recursively
             faux_px_grandparent = self._pixels[0]
             # faux_px_grandparent.image_x = 0
-            self.define_pixels_recursively(px_middle, faux_px_grandparent)
+            await self.define_pixels_recursively(px_middle, faux_px_grandparent)
 
         # determine the min and max z values in the pixel array
         #
@@ -127,7 +127,7 @@ class MSet(object):
         #         print(f"Name: {self._pixels[i].triplet_name}, image_x: {self._pixels[i].image_x}")
 
 
-    def define_pixels_recursively(self, px_parent, px_grandparent):
+    async def define_pixels_recursively(self, px_parent, px_grandparent):
         if px_parent.image_x %2 == 0:  # further subdivision is possible
 
             # define the pixel to the left of the parent
@@ -137,43 +137,47 @@ class MSet(object):
             px_left.triplet_name = ''.join([px_parent.triplet_name, 'L'])
             px_left.sib_right_image_x = px_parent.image_x
             px_left.sib_left_image_x = px_parent.sib_left_image_x
+            if DEBUG_FLAG: print(f"\nProcessing row {px_parent.image_y}'s {px_left.triplet_name}, the left child of {px_parent.triplet_name}...")
+            if DEBUG_FLAG: print(
+                f"   ... whose image_x is {left_image_x}, left sib's img_x is {px_left.sib_left_image_x}, and right sib's img_x is {px_left.sib_right_image_x}")
             if px_parent.output_method == "fmla":
                 # we're safe to use the parent's fmla
-                if DEBUG_FLAG: print(f"While processing {px_left.triplet_name}, found that it's parent used fmla output method.")
+                if DEBUG_FLAG: print(f"   ... found that its parent used fmla output method.")
                 px_left.output_z = self.calc_quat(px_parent.coeffs_list[0], px_parent.coeffs_list[1], px_parent.coeffs_list[2], left_fractal_x)
                 px_left.output_method = "fmla"
                 px_left.coeffs_list = px_parent.coeffs_list
             else:
                 # going to need to calc escape-time for this pixel
-                if DEBUG_FLAG: print(f"While processing {px_left.triplet_name}, found that it needed escape-time calculated.")
+                if DEBUG_FLAG: print(f"   ... found that it needed escape-time calculated.")
                 px_left.escape_z = self.calc_escape(px_left, self.maxiter)
                 # now use the parent's coeffs to calc this pixel's fmla_z and compare the result with its escape-time
-                if DEBUG_FLAG: print(f"Parent {px_parent.triplet_name} coeffs list len is {len(px_parent.coeffs_list)}")
+                if DEBUG_FLAG: print(f"   ... parent's coeffs list len is {len(px_parent.coeffs_list)}")
                 px_left_parent_fmla_z = self.calc_quat(px_parent.coeffs_list[0],
                                                        px_parent.coeffs_list[1],
                                                        px_parent.coeffs_list[2], left_fractal_x)
-                if DEBUG_FLAG: print(f"   {px_left.triplet_name} escape z: {px_left.escape_z}")
-                if DEBUG_FLAG: print(f"   versus {px_parent.triplet_name} fmla z: {px_left_parent_fmla_z}")
+                if DEBUG_FLAG: print(f"   ... comparing escape z: {px_left.escape_z}")
+                if DEBUG_FLAG: print(f"   ... versus parent's fmla z: {px_left_parent_fmla_z}")
                 px_left_z_diff_parent = (abs(px_left.escape_z - px_left_parent_fmla_z) / px_left.escape_z) * 100
+                if DEBUG_FLAG: print(f"   .. for a difference ratio of {px_left_z_diff_parent}%")
                 if px_left_z_diff_parent < 1.0:
                     # use the grandparent's coeffs to calc this pixel's fmla_z and compare the result with its escape-time
-                    px_left_grandparent_fmla_z = self.calc_quat(px_parent.coeffs_list, left_fractal_x)
+                    px_left_grandparent_fmla_z = self.calc_quat(px_parent.coeffs_list[0], px_parent.coeffs_list[1], px_parent.coeffs_list[2], left_fractal_x)
                     px_left_z_diff_grandparent = (abs(px_left.escape_z - px_left_grandparent_fmla_z) / px_left.escape_z) * 100
                     if px_left_z_diff_grandparent < 1.0:
                         # we're safe to use the parent's fmla
                         px_left.output_z = px_left_parent_fmla_z
                         px_left.output_method = "fmla"
                         px_left.coeffs_list = px_parent.coeffs_list
-                    else:
-                        # we're going to use this pixel's escape-time
-                        px_left.output_z = px_left.escape_z
-                        px_left.output_method = "esc"
-                        # calc this pixel's coefficients so the next iteration can use them for testing
-                        px_parent_sib_left_index = px_parent.sib_left_image_x
-                        if DEBUG_FLAG: print(f"Parent's sib left image x is {px_parent_sib_left_index}")
-                        px_parent_sib_left = self._pixels[px_parent_sib_left_index]
-                        if DEBUG_FLAG: print(f"Parent's sib left is {px_parent_sib_left}")
-                        px_left.coeffs_list = self.get_coeffs(px_parent_sib_left, px_left, px_parent)
+                if px_left_z_diff_parent >= 1.0:
+                    # we're going to use this pixel's escape-time
+                    px_left.output_z = px_left.escape_z
+                    px_left.output_method = "esc"
+                    # calc this pixel's coefficients so the next iteration can use them for testing
+                    px_parent_sib_left_index = px_parent.sib_left_image_x
+                    if DEBUG_FLAG: print(f"Parent's sib left image x is {px_parent_sib_left_index}")
+                    px_parent_sib_left = self._pixels[px_parent_sib_left_index]
+                    if DEBUG_FLAG: print(f"Parent's sib left is {px_parent_sib_left}")
+                    px_left.coeffs_list = self.get_coeffs(px_parent_sib_left, px_left, px_parent)
             self._pixels[(self.img_width * px_parent.image_y) + left_image_x] = px_left
 
             # define the pixel to the right of the parent
@@ -181,45 +185,54 @@ class MSet(object):
             right_fractal_x = self.frc_min_x + (self.pixel_size * right_image_x)
             px_right = Pixel(right_image_x, px_parent.image_y, right_fractal_x, px_parent.fractal_y)
             px_right.triplet_name = ''.join([px_parent.triplet_name, 'R'])
-            px_right.sib_right_image_x = px_parent.image_x
             px_right.sib_right_image_x = px_parent.sib_right_image_x
+            px_right.sib_left_image_x = px_parent.image_x
+            if DEBUG_FLAG: print(f"\nProcessing row {px_parent.image_y}'s {px_right.triplet_name}, the right child of {px_parent.triplet_name}...")
+            if DEBUG_FLAG: print(
+                f"   ... whose image_x is {right_image_x}, left sib's img_x is {px_right.sib_left_image_x}, and right sib's img_x is {px_right.sib_right_image_x}")
             if px_parent.output_method == "fmla":
                 # we're safe to use the parent's fmla
-                px_right.output_z = self.calc_quat(px_parent.coeffs_list, right_fractal_x)
+                if DEBUG_FLAG: print(f"   ... found that its parent used fmla output method.")
+                px_right.output_z = self.calc_quat(px_parent.coeffs_list[0], px_parent.coeffs_list[1], px_parent.coeffs_list[2], right_fractal_x)
                 px_right.output_method = "fmla"
                 px_right.coeffs_list = px_parent.coeffs_list
             else:
                 # going to need to calc escape-time for this pixel
+                if DEBUG_FLAG: print(f"   ... found that it needed escape-time calculated.")
                 px_right.escape_z = self.calc_escape(px_right, self.maxiter)
                 # now use the parent's coeffs to calc this pixel's fmla_z and compare the result with its escape-time
+                if DEBUG_FLAG: print(f"   ... parent's coeffs list len is {len(px_parent.coeffs_list)}")
                 px_right_parent_fmla_z = self.calc_quat(px_parent.coeffs_list[0],
                                                         px_parent.coeffs_list[1],
                                                         px_parent.coeffs_list[2], right_fractal_x)
+                if DEBUG_FLAG: print(f"   ... comparing escape z: {px_right.escape_z}")
+                if DEBUG_FLAG: print(f"   ... versus parent's fmla z: {px_right_parent_fmla_z}")
                 px_right_z_diff_parent = (abs(px_right.escape_z - px_right_parent_fmla_z) / px_right.escape_z) * 100
+                if DEBUG_FLAG: print(f"   .. for a difference ratio of {px_right_z_diff_parent}%")
                 if px_right_z_diff_parent < 1.0:
                     # use the grandparent's coeffs to calc this pixel's fmla_z and compare the result with its escape-time
-                    px_right_grandparent_fmla_z = self.calc_quat(px_parent.coeffs_list, right_fractal_x)
+                    px_right_grandparent_fmla_z = self.calc_quat(px_parent.coeffs_list[0], px_parent.coeffs_list[1], px_parent.coeffs_list[2], right_fractal_x)
                     px_right_z_diff_grandparent = (abs(px_right.escape_z - px_right_grandparent_fmla_z) / px_right.escape_z) * 100
                     if px_right_z_diff_grandparent < 1.0:
                         # we're safe to use the parent's fmla
                         px_right.output_z = px_right_parent_fmla_z
                         px_right.output_method = "fmla"
                         px_right.coeffs_list = px_parent.coeffs_list
-                    else:
-                        # we're going to use this pixel's escape-time
-                        px_right.output_z = px_right.escape_z
-                        px_right.output_method = "esc"
-                        # calc this pixel's coefficients so the next iteration can use them for testing
-                        px_parent_sib_right_index = px_parent.sib_right_image_x
-                        if DEBUG_FLAG: print(f"Parent's sib right image x is {px_parent_sib_right_index}")
-                        px_parent_sib_right = self._pixels[px_parent_sib_right_index]
-                        if DEBUG_FLAG: print(f"Parent's sib left is {px_parent_sib_left}")
-                        px_right.coeffs_list = self.get_coeffs(px_parent, px_right, px_parent_sib_right)
+                if px_right_z_diff_parent >= 1.0:
+                    # we're going to use this pixel's escape-time
+                    px_right.output_z = px_right.escape_z
+                    px_right.output_method = "esc"
+                    # calc this pixel's coefficients so the next iteration can use them for testing
+                    px_parent_sib_right_index = px_parent.sib_right_image_x
+                    if DEBUG_FLAG: print(f"Parent's sib right image x is {px_parent_sib_right_index}")
+                    px_parent_sib_right = self._pixels[px_parent_sib_right_index]
+                    if DEBUG_FLAG: print(f"Parent's sib left is {px_parent_sib_right}")
+                    px_right.coeffs_list = self.get_coeffs(px_parent, px_right, px_parent_sib_right)
             self._pixels[(self.img_width * px_parent.image_y) + right_image_x] = px_right
 
             # recursively define the next generation of pixels
-            self.define_pixels_recursively(px_left, px_parent)
-            self.define_pixels_recursively(px_right, px_parent)
+            await self.define_pixels_recursively(px_left, px_parent)
+            await self.define_pixels_recursively(px_right, px_parent)
 
 
         else:  # further subdivision is not possible
@@ -248,7 +261,7 @@ class MSet(object):
 
     def calc_quat(self, a, b, c, fractal_x):
         if DEBUG_FLAG:
-            print(a, b, c)
+            print(f"INTO CALC_QUAT... [a, b, c] are: [{a}, {b}, {c}]")
         y = sympy.symbols("y", real=True)
         eq = sympy.Eq(a * fractal_x ** 2 + b * fractal_x + c, y)
         sol = sympy.solve([eq], [y])
@@ -285,6 +298,7 @@ class MSet(object):
             print(f"   min z: {self.min_z}")
             print(f"   max z: {self.max_z}")
         display.display_iter_array(self._pixels, self.min_z, self.max_z, self.img_width, self.img_height)
+
 
 class Pixel(object):
 

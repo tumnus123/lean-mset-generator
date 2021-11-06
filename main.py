@@ -10,8 +10,11 @@
 #
 
 from mandelset import MSet
+import asyncio
+from datetime import datetime
 
 print("Starting...")
+start_time = datetime.now()
 # mset = MSet(-0.18, 1.05, 15.0, 40, 30)
 mset = MSet(
     frc_ctr_x=-0.18,
@@ -19,16 +22,16 @@ mset = MSet(
     # frc_ctr_x=0,
     # frc_ctr_y=0,
     mag=50.0,
-    img_width=80,
-    img_height=60,
+    img_width=65,
+    img_height=49,
     alg=0,
     pal=0,
     thresh=4,
     generations=4)
 
 # mset.calc()
-mset.calc_simple_2D_array()
+asyncio.run(mset.calc_simple_2D_array())
 # mset.plot()
 mset.plot_PIL()
 
-print("... Done!")
+print(f"FINISHED in {datetime.now() - start_time} seconds")
